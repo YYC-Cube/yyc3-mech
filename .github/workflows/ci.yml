@@ -5,6 +5,12 @@ on:
     branches: ["**"]
   pull_request:
     branches: ["**"]
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: "Force bypass caches and clean local cache directories"
+        required: false
+        default: "false"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -37,16 +43,35 @@ jobs:
           version: 8
           run_install: false
 
+      - name: Cache bust key suffix (optional)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.clear_cache == 'true'
+        run: echo "CACHE_SUFFIX=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Determine pnpm store path
+        id: pnpm-cache-dir
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache-dir.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}-${{ env.CACHE_SUFFIX }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
       - name: Cache Next.js build artifacts
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
+          key: ${{ runner.os }}-next-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}-${{ env.CACHE_SUFFIX }}
           restore-keys: |
             ${{ runner.os }}-next-
 
+      - name: Prefetch dependencies
+        run: pnpm fetch
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Lint
         run: pnpm lint
