@@ -1,0 +1,22 @@
+# Dependencies & caches
+node_modules
+.pnpm-store
+.next/cache
+
+# Local env & logs
+.env*
+logs/
+
+# VCS & editor
+.git
+.gitignore
+.vscode
+.idea
+
+# Tests & coverage
+coverage
+
+# Misc
+Dockerfile*
+README.md
+scripts/
