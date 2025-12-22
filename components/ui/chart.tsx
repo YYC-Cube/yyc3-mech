@@ -76,25 +76,47 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // 安全的CSS颜色值验证函数
+  const sanitizeColor = (color: string): string | null => {
+    // 只允许有效的CSS颜色格式
+    const validColorPattern = /^(#[0-9A-Fa-f]{3,8}|rgb\(.*?\)|rgba\(.*?\)|hsl\(.*?\)|hsla\(.*?\)|[a-z]+)$/;
+    if (typeof color === 'string' && validColorPattern.test(color.trim())) {
+      return color.trim();
+    }
+    return null;
+  };
+
+  // 安全的选择器和变量名验证
+  const sanitizeId = (id: string): string => {
+    return id.replace(/[^a-zA-Z0-9_-]/g, '');
+  };
+
+  const safeId = sanitizeId(id);
+
+  const cssContent = Object.entries(THEMES)
+    .map(
+      ([theme, prefix]) => {
+        const colorVars = colorConfig
+          .map(([key, itemConfig]) => {
+            const color =
+              itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+              itemConfig.color;
+            const sanitizedColor = color ? sanitizeColor(String(color)) : null;
+            const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
+            return sanitizedColor ? `  --color-${sanitizedKey}: ${sanitizedColor};` : null;
+          })
+          .filter(Boolean)
+          .join("\n");
+        
+        return `${prefix} [data-chart=${safeId}] {\n${colorVars}\n}`;
+      }
+    )
+    .join("\n");
+
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
-  })
-  .join("\n")}
-}
-`,
-          )
-          .join("\n"),
+        __html: cssContent,
       }}
     />
   );

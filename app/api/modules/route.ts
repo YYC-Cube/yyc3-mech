@@ -56,13 +56,27 @@ export async function GET(request: Request) {
 }
 
 // 添加OPTIONS方法处理CORS预检请求
-export async function OPTIONS() {
+export async function OPTIONS(request: Request) {
+  const origin = request.headers.get('origin');
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+  
+  // 在开发环境允许 localhost
+  if (process.env.NODE_ENV === 'development') {
+    allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
+  }
+  
+  const headers: HeadersInit = {
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+  
+  if (origin && (allowedOrigins.includes(origin) || allowedOrigins.length === 0)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+  
   return new NextResponse(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
+    headers,
   });
 }
