@@ -78,11 +78,63 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
   // 安全的CSS颜色值验证函数
   const sanitizeColor = (color: string): string | null => {
-    // 只允许有效的CSS颜色格式
-    const validColorPattern = /^(#[0-9A-Fa-f]{3,8}|rgb\(.*?\)|rgba\(.*?\)|hsl\(.*?\)|hsla\(.*?\)|[a-z]+)$/;
-    if (typeof color === 'string' && validColorPattern.test(color.trim())) {
-      return color.trim();
+    // 只允许有效的CSS颜色格式，使用严格的模式匹配
+    const hexPattern = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
+    const rgbPattern = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/;
+    const rgbaPattern = /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([01]?\.?\d*)\s*\)$/;
+    const hslPattern = /^hsl\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)$/;
+    const hslaPattern = /^hsla\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*,\s*([01]?\.?\d*)\s*\)$/;
+    const namedColorPattern = /^(transparent|currentcolor|black|white|red|green|blue|yellow|cyan|magenta|gray|grey|silver|maroon|purple|fuchsia|lime|olive|navy|teal|aqua|orange)$/i;
+    
+    if (typeof color !== 'string') {
+      return null;
     }
+    
+    const trimmedColor = color.trim();
+    
+    if (hexPattern.test(trimmedColor) || 
+        namedColorPattern.test(trimmedColor)) {
+      return trimmedColor;
+    }
+    
+    // Validate RGB/RGBA values are in valid range
+    const rgbMatch = rgbPattern.exec(trimmedColor);
+    if (rgbMatch) {
+      const [, r, g, b] = rgbMatch;
+      if (parseInt(r) <= 255 && parseInt(g) <= 255 && parseInt(b) <= 255) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
+    const rgbaMatch = rgbaPattern.exec(trimmedColor);
+    if (rgbaMatch) {
+      const [, r, g, b, a] = rgbaMatch;
+      if (parseInt(r) <= 255 && parseInt(g) <= 255 && parseInt(b) <= 255 && parseFloat(a) <= 1) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
+    // Validate HSL/HSLA values are in valid range
+    const hslMatch = hslPattern.exec(trimmedColor);
+    if (hslMatch) {
+      const [, h, s, l] = hslMatch;
+      if (parseInt(h) <= 360 && parseInt(s) <= 100 && parseInt(l) <= 100) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
+    const hslaMatch = hslaPattern.exec(trimmedColor);
+    if (hslaMatch) {
+      const [, h, s, l, a] = hslaMatch;
+      if (parseInt(h) <= 360 && parseInt(s) <= 100 && parseInt(l) <= 100 && parseFloat(a) <= 1) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
     return null;
   };
 

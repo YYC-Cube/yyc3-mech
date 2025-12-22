@@ -19,7 +19,8 @@ export function middleware(request: NextRequest) {
   const origin = request.headers.get('origin');
   const allowedOrigins = getAllowedOrigins();
   
-  if (origin && (allowedOrigins.includes(origin) || allowedOrigins.length === 0)) {
+  // 严格的源验证 - 只有在明确允许的情况下才设置 CORS 头
+  if (origin && allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
     response.headers.set("Access-Control-Allow-Origin", origin);
     response.headers.set("Access-Control-Allow-Credentials", "true");
   }

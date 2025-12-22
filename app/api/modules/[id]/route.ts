@@ -1,25 +1,22 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from 'next/server';
 import { mockModules } from "@/services/mock-data";
-import { z } from 'zod';
-
-// 定义模块ID验证模式
-const moduleIdSchema = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
+import { getValidatedModuleId } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   try {
     // 从URL获取参数并验证
-    const id = request.nextUrl.pathname.split('/').filter(Boolean).pop() || '';
-    
-    const idValidation = moduleIdSchema.safeParse(id);
-    if (!idValidation.success) {
-      return NextResponse.json({ error: "无效的模块ID" }, { status: 400 });
+    const validationResult = getValidatedModuleId(request.nextUrl.pathname);
+    if (!validationResult.success) {
+      return NextResponse.json({ error: validationResult.error }, { status: 400 });
     }
+    
+    const id = validationResult.data;
     
     // 模拟API延迟
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const module = mockModules.find((m) => m.id === idValidation.data);
+    const module = mockModules.find((m) => m.id === id);
 
     if (!module) {
       return NextResponse.json({ error: "模块不存在" }, { status: 404 });
@@ -47,7 +44,8 @@ export async function OPTIONS(request: Request) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
   
-  if (origin && (allowedOrigins.includes(origin) || allowedOrigins.length === 0)) {
+  // 严格验证：只有在明确允许的情况下才设置 CORS 头
+  if (origin && allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Credentials"] = "true";
   }

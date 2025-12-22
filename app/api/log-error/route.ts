@@ -38,6 +38,36 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const RATE_LIMIT_MAX = 10; // 10 requests per minute
 
+// 清理过期的速率限制记录
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitMap.entries()) {
+    if (now > value.resetTime) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, 60000); // 每分钟清理一次
+
+function getClientId(req: Request): string {
+  // 优先使用 Cloudflare 或可信代理提供的真实IP
+  const cfConnectingIP = req.headers.get('cf-connecting-ip');
+  if (cfConnectingIP) {
+    return cfConnectingIP;
+  }
+  
+  // 对于已知的可信代理（如Vercel），可以使用x-forwarded-for
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  const realIP = req.headers.get('x-real-ip');
+  
+  // 使用多个标识符的组合来提高安全性
+  const userAgent = req.headers.get('user-agent') || '';
+  const baseId = realIP || (forwardedFor?.split(',')[0].trim()) || 'unknown';
+  
+  // 结合 IP 和 User-Agent 的哈希值作为更可靠的客户端标识
+  // 注意：这仍然可以被绕过，但增加了难度
+  return `${baseId}-${userAgent.substring(0, 50)}`;
+}
+
 function checkRateLimit(clientId: string): boolean {
   const now = Date.now();
   const limit = rateLimitMap.get(clientId);
@@ -57,8 +87,8 @@ function checkRateLimit(clientId: string): boolean {
 
 export async function POST(req: Request) {
   try {
-    // Rate limiting
-    const clientId = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    // Rate limiting with improved client identification
+    const clientId = getClientId(req);
     if (!checkRateLimit(clientId)) {
       return new Response(JSON.stringify({ ok: false, error: 'rate_limit_exceeded' }), {
         status: 429,

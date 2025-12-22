@@ -49,7 +49,7 @@ const nextConfig = {
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       {
         key: 'Content-Security-Policy',
-        value: "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'nonce-{{NONCE}}'; style-src 'self'; font-src 'self' data:; connect-src 'self' https: ws:; media-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+        value: "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self'; style-src 'self'; font-src 'self' data:; connect-src 'self' https: ws:; media-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
       },
       {
         key: 'Strict-Transport-Security',

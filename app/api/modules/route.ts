@@ -70,7 +70,8 @@ export async function OPTIONS(request: Request) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
   
-  if (origin && (allowedOrigins.includes(origin) || allowedOrigins.length === 0)) {
+  // 严格验证：只有在明确允许的情况下才设置 CORS 头
+  if (origin && allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Credentials"] = "true";
   }

@@ -1,27 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { getValidatedModuleId } from '@/lib/api-utils';
 
 // 定义请求体验证模式
 const shareSchema = z.object({
   platform: z.enum(['twitter', 'facebook', 'linkedin', 'wechat', 'email', 'other']),
 });
 
-// 定义模块ID验证模式
-const moduleIdSchema = z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/);
-
 export async function POST(request: NextRequest) {
   try {
     // 从URL获取参数并验证
-    const id = request.nextUrl.pathname.split('/').filter(Boolean).pop() || '';
-    
-    const idValidation = moduleIdSchema.safeParse(id);
-    if (!idValidation.success) {
+    const validationResult = getValidatedModuleId(request.nextUrl.pathname);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "无效的模块ID", url: "" },
+        { error: validationResult.error, url: "" },
         { status: 400 },
       );
     }
+    
+    const id = validationResult.data;
     
     // 模拟API延迟
     await new Promise((resolve) => setTimeout(resolve, 300));
@@ -39,11 +37,11 @@ export async function POST(request: NextRequest) {
     
     const { platform } = validation.data;
 
-    console.log(`模块 ${idValidation.data} 已分享到: ${platform}`);
+    console.log(`模块 ${id} 已分享到: ${platform}`);
 
     // 使用验证过的ID构建URL
     return NextResponse.json({
-      url: `https://nexus-ai.example.com/share/${idValidation.data}`,
+      url: `https://nexus-ai.example.com/share/${id}`,
     });
   } catch (error) {
     console.error('分享模块失败:', error);
