@@ -76,25 +76,99 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // 安全的CSS颜色值验证函数
+  const sanitizeColor = (color: string): string | null => {
+    // 只允许有效的CSS颜色格式，使用严格的模式匹配
+    const hexPattern = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
+    const rgbPattern = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/;
+    const rgbaPattern = /^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([01]?\.?\d*)\s*\)$/;
+    const hslPattern = /^hsl\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*\)$/;
+    const hslaPattern = /^hsla\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*,\s*([01]?\.?\d*)\s*\)$/;
+    const namedColorPattern = /^(transparent|currentcolor|black|white|red|green|blue|yellow|cyan|magenta|gray|grey|silver|maroon|purple|fuchsia|lime|olive|navy|teal|aqua|orange)$/i;
+    
+    if (typeof color !== 'string') {
+      return null;
+    }
+    
+    const trimmedColor = color.trim();
+    
+    if (hexPattern.test(trimmedColor) || 
+        namedColorPattern.test(trimmedColor)) {
+      return trimmedColor;
+    }
+    
+    // Validate RGB/RGBA values are in valid range
+    const rgbMatch = rgbPattern.exec(trimmedColor);
+    if (rgbMatch) {
+      const [, r, g, b] = rgbMatch;
+      if (parseInt(r) <= 255 && parseInt(g) <= 255 && parseInt(b) <= 255) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
+    const rgbaMatch = rgbaPattern.exec(trimmedColor);
+    if (rgbaMatch) {
+      const [, r, g, b, a] = rgbaMatch;
+      if (parseInt(r) <= 255 && parseInt(g) <= 255 && parseInt(b) <= 255 && parseFloat(a) <= 1) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
+    // Validate HSL/HSLA values are in valid range
+    const hslMatch = hslPattern.exec(trimmedColor);
+    if (hslMatch) {
+      const [, h, s, l] = hslMatch;
+      if (parseInt(h) <= 360 && parseInt(s) <= 100 && parseInt(l) <= 100) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
+    const hslaMatch = hslaPattern.exec(trimmedColor);
+    if (hslaMatch) {
+      const [, h, s, l, a] = hslaMatch;
+      if (parseInt(h) <= 360 && parseInt(s) <= 100 && parseInt(l) <= 100 && parseFloat(a) <= 1) {
+        return trimmedColor;
+      }
+      return null;
+    }
+    
+    return null;
+  };
+
+  // 安全的选择器和变量名验证
+  const sanitizeId = (id: string): string => {
+    return id.replace(/[^a-zA-Z0-9_-]/g, '');
+  };
+
+  const safeId = sanitizeId(id);
+
+  const cssContent = Object.entries(THEMES)
+    .map(
+      ([theme, prefix]) => {
+        const colorVars = colorConfig
+          .map(([key, itemConfig]) => {
+            const color =
+              itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+              itemConfig.color;
+            const sanitizedColor = color ? sanitizeColor(String(color)) : null;
+            const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '');
+            return sanitizedColor ? `  --color-${sanitizedKey}: ${sanitizedColor};` : null;
+          })
+          .filter(Boolean)
+          .join("\n");
+        
+        return `${prefix} [data-chart=${safeId}] {\n${colorVars}\n}`;
+      }
+    )
+    .join("\n");
+
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
-  })
-  .join("\n")}
-}
-`,
-          )
-          .join("\n"),
+        __html: cssContent,
       }}
     />
   );
